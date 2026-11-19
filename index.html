@@ -410,11 +410,13 @@
       }
     }
 
+    // Consulta automática de tasas en ve.dolarapi.com (Dólar BCV, Euro BCV y referencia USDT / Paralelo)
     async function obtenerTasaBCV(notificar = true) {
       try {
-        const [resUsd, resEur] = await Promise.allSettled([
+        const [resUsd, resEur, resUsdt] = await Promise.allSettled([
           fetch("https://ve.dolarapi.com/v1/dolares/oficial"),
-          fetch("https://ve.dolarapi.com/v1/euros/oficial")
+          fetch("https://ve.dolarapi.com/v1/euros/oficial"),
+          fetch("https://ve.dolarapi.com/v1/dolares/paralelo")
         ]);
 
         let actualizado = false;
@@ -432,14 +434,21 @@
             actualizado = true;
           }
         }
+        if (resUsdt.status === "fulfilled" && resUsdt.value.ok) {
+          const dataUsdt = await resUsdt.value.json();
+          if (dataUsdt && dataUsdt.promedio) {
+            estado.tasas.USDT = parseFloat(dataUsdt.promedio.toFixed(2));
+            actualizado = true;
+          }
+        }
 
         if (actualizado) {
           guardarEstado();
           actualizarUI();
-          if (notificar) mostrarToast(`Tasas BCV actualizadas (${estado.tasas.USD} Bs.)`);
+          if (notificar) mostrarToast(`Tasas actualizadas (BCV: ${estado.tasas.USD} Bs. • USDT: ${estado.tasas.USDT} Bs.)`);
         }
       } catch (e) {
-        if (notificar) mostrarToast("No se pudo conectar con BCV. Verifica tu internet.");
+        if (notificar) mostrarToast("No se pudo conectar con la fuente de tasas. Verifica tu internet.");
       }
     }
 
