@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#FCD116" />
+  <title>Tarifario Oficial - Línea de Taxi 4 Esquinas</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fuente Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f3f4f6;
+    }
+    .brand-header {
+      background: linear-gradient(135deg, #FCD116 0%, #FFE659 55%, #FFF8D6 100%);
+      border-bottom: 4px solid #DC2626;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="text-gray-900 pb-24">
+
+  <!-- 1. ENCABEZADO EJECUTIVO DE MARCA -->
+  <header class="brand-header sticky top-0 z-30 shadow-md px-4 py-3">
+    <div class="max-w-lg mx-auto flex items-center justify-between gap-2">
+      <div>
+        <h1 class="text-base sm:text-lg font-black tracking-tight text-gray-950 leading-tight uppercase">
+          LÍNEA DE <span class="text-red-600">TAXI</span> 4 ESQUINAS
+        </h1>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="bg-gray-950 text-yellow-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full tracking-wide uppercase">
+            LOS TEQUES • Av. Bolívar
+          </span>
+          <span id="fecha-actual" class="text-[11px] font-semibold text-gray-800 capitalize"></span>
+        </div>
+      </div>
+
+      <!-- Botones de Sincronización con Google Sheets y Panel Administrador -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="sincronizarNube(true)" id="btn-sync" title="Sincronizar con Google Sheets"
+          class="bg-gray-950 text-white p-2.5 rounded-xl shadow active:scale-95 transition">
+          <svg id="icon-sync" class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        <button onclick="abrirModalAdmin()" title="Panel Administrador"
+          class="bg-red-600 text-white p-2.5 rounded-xl shadow active:scale-95 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-lg mx-auto px-3 pt-3 space-y-3">
+
+    <!-- 2. PANEL MULTI-MONEDA Y CONTROL DE TASA -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-3.5">
+      <div class="grid grid-cols-3 gap-1.5 bg-gray-100 p-1 rounded-xl mb-3">
+        <button onclick="cambiarMoneda('USD')" id="tab-USD" class="py-2 text-xs font-extrabold rounded-lg transition bg-gray-900 text-yellow-400 shadow">
+          Dólar BCV
+        </button>
+        <button onclick="cambiarMoneda('EUR')" id="tab-EUR" class="py-2 text-xs font-bold rounded-lg transition text-gray-600">
+          Euro BCV
+        </button>
+        <button onclick="cambiarMoneda('USDT')" id="tab-USDT" class="py-2 text-xs font-bold rounded-lg transition text-gray-600">
+          USDT
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-[11px] uppercase font-bold text-gray-400 block" id="label-tasa">Tasa Dólar BCV Hoy</span>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-2xl font-black text-gray-900" id="valor-tasa">0.00</span>
+            <span class="text-xs font-bold text-gray-500">Bs.</span>
+          </div>
+          <span id="estado-nube" class="text-[10px] font-semibold text-emerald-600 block mt-0.5">● Conectando con Google Sheets...</span>
+        </div>
+
+        <div class="flex flex-col items-end gap-1.5">
+          <button onclick="obtenerTasaBCV(true)" class="text-[11px] bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-bold px-3 py-1.5 rounded-lg border border-yellow-300 active:scale-95 transition">
+            ↻ Actualizar BCV
+          </button>
+          <button onclick="abrirModalTasaRapida()" class="text-[11px] text-gray-500 underline font-semibold">
+            Editar tasa manual
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. INTERRUPTOR TARIFA NOCTURNA / FERIADA -->
+      <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-extrabold text-gray-800">🌙 Tarifa Nocturna / Feriada</span>
+            <span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded" id="badge-recargo">+20%</span>
+          </div>
+          <span class="text-[11px] font-bold text-red-600 block">(Después de las 10:00 PM)</span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="toggle-nocturno" onchange="toggleNocturno()" class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+        </label>
+      </div>
+    </section>
+
+    <!-- 4. PESTAÑAS PRINCIPALES -->
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="mostrarVista('tarifario')" id="btn-vista-tarifario" class="py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide bg-gray-900 text-yellow-400 shadow">
+        📋 Tarifario de Rutas
+      </button>
+      <button onclick="mostrarVista('calculadora')" id="btn-vista-calculadora" class="py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide bg-white text-gray-700 border border-gray-200">
+        🧮 Calculadora / Vuelto
+      </button>
+    </div>
+
+    <!-- VISTA 1: TARIFARIO DE RUTAS -->
+    <div id="vista-tarifario" class="space-y-3">
+      <!-- BUSCADOR CON BOTÓN LIMPIAR X -->
+      <div class="relative">
+        <input type="text" id="buscador" oninput="filtrarRutas()" placeholder="Buscar sector, urbanización o destino..."
+          class="w-full bg-white border border-gray-300 rounded-xl pl-9 pr-9 py-2.5 text-sm font-medium focus:outline-none focus:border-gray-900 shadow-sm" />
+        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <button onclick="limpiarBuscador()" id="btn-limpiar-busqueda" class="hidden absolute right-2.5 top-2 bg-gray-200 text-gray-700 rounded-full w-6 h-6 text-xs font-bold flex items-center justify-center">
+          ✕
+        </button>
+      </div>
+
+      <!-- FILTROS TÁCTILES POR ZONA -->
+      <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1" id="contenedor-zonas">
+        <button onclick="seleccionarZona('Todos')" data-zona="Todos" class="zona-chip px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap bg-gray-900 text-yellow-400">Todos</button>
+        <button onclick="seleccionarZona('Los Teques')" data-zona="Los Teques" class="zona-chip px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white text-gray-700 border border-gray-200">Los Teques</button>
+        <button onclick="seleccionarZona('Carrizal')" data-zona="Carrizal" class="zona-chip px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white text-gray-700 border border-gray-200">Carrizal</button>
+        <button onclick="seleccionarZona('San Antonio')" data-zona="San Antonio" class="zona-chip px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white text-gray-700 border border-gray-200">San Antonio</button>
+        <button onclick="seleccionarZona('Caracas')" data-zona="Caracas" class="zona-chip px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white text-gray-700 border border-gray-200">Caracas</button>
+      </div>
+
+      <!-- TARJETAS DE DESTINOS -->
+      <div id="lista-rutas" class="space-y-2"></div>
+    </div>
+
+    <!-- VISTA 2: CALCULADORA / VUELTO -->
+    <div id="vista-calculadora" class="hidden space-y-3">
+      <!-- CONVERSOR LIBRE -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+        <h2 class="text-sm font-black uppercase text-gray-800">Conversor Rápido de Carrera</h2>
+        <div>
+          <label class="text-xs font-bold text-gray-500 block mb-1">Monto base de la carrera (Divisa fija)</label>
+          <input type="number" step="0.5" id="calc-monto" oninput="calcularLibre()" placeholder="Ej: 5"
+            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-lg font-black focus:outline-none focus:border-gray-900" />
+        </div>
+        <div class="bg-gray-900 text-white rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <span class="text-[11px] text-gray-400 block">Total a cobrar en Bolívares</span>
+            <span class="text-2xl font-black text-yellow-400" id="calc-resultado-bs">0.00 Bs.</span>
+          </div>
+          <button onclick="enviarCalcWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl">
+            WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <!-- CALCULADORA DE VUELTO / PAGO MIXTO -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+        <h2 class="text-sm font-black uppercase text-gray-800">Calculadora de Vuelto / Pago Mixto</h2>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[11px] font-bold text-gray-500 block mb-1">Valor Carrera ($)</label>
+            <input type="number" step="0.5" id="mixto-carrera" oninput="calcularMixto()" placeholder="Ej: 12"
+              class="w-full border border-gray-300 rounded-xl px-3 py-2 text-base font-black" />
+          </div>
+          <div>
+            <label class="text-[11px] font-bold text-gray-500 block mb-1">Pasajero entrega ($)</label>
+            <input type="number" step="0.5" id="mixto-entrega" oninput="calcularMixto()" placeholder="Ej: 20 o 5"
+              class="w-full border border-gray-300 rounded-xl px-3 py-2 text-base font-black" />
+          </div>
+        </div>
+        <div id="mixto-resultado" class="bg-gray-100 rounded-xl p-3 text-center text-xs font-bold text-gray-600">
+          Ingresa el monto de la carrera y el efectivo que entrega el pasajero.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- NOTIFICACIÓN FLOTANTE (SIN ALERT) -->
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-950 text-yellow-400 text-xs font-bold px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity z-50">
+    Copiado
+  </div>
+
+  <!-- MODAL EDICIÓN RÁPIDA DE TASA -->
+  <div id="modal-tasa" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-40 p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-4 space-y-3 shadow-xl">
+      <h3 class="font-black text-base text-gray-900" id="titulo-modal-tasa">Editar Tasa Manual</h3>
+      <input type="number" step="0.01" id="input-nueva-tasa" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-lg font-black" />
+      <div class="flex justify-end gap-2">
+        <button onclick="cerrarModalTasa()" class="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded-xl">Cancelar</button>
+        <button onclick="guardarTasaManual()" class="px-4 py-2 text-xs font-bold text-yellow-400 bg-gray-900 rounded-xl">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MODAL PANEL ADMINISTRADOR (PIN 2026) -->
+  <div id="modal-admin" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full p-4 space-y-4 my-auto shadow-2xl">
+      <div class="flex items-center justify-between border-b pb-2.5">
+        <h3 class="font-black text-base text-gray-900">Panel Administrador • 4 Esquinas</h3>
+        <button onclick="cerrarModalAdmin()" class="text-gray-500 font-bold text-lg px-2">✕</button>
+      </div>
+
+      <!-- ACCESO PIN -->
+      <div id="admin-login" class="space-y-3">
+        <p class="text-xs text-gray-600 font-medium">Ingresa el PIN de directiva para gestionar tasas, recargos y rutas:</p>
+        <input type="password" inputmode="numeric" id="input-pin" placeholder="PIN (2026)"
+          class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-center text-lg font-black tracking-widest" />
+        <button onclick="verificarPin()" class="w-full bg-gray-900 text-yellow-400 font-extrabold py-2.5 rounded-xl text-sm">
+          Desbloquear Panel
+        </button>
+      </div>
+
+      <!-- CONTENIDO DESBLOQUEADO -->
+      <div id="admin-contenido" class="hidden space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+        <!-- TASAS Y RECARGO NOCTURNO -->
+        <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2.5">
+          <h4 class="text-xs font-black uppercase text-gray-700">Tasas y Recargo Nocturno</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] font-bold text-gray-500">Dólar BCV</label>
+              <input type="number" step="0.01" id="admin-usd" class="w-full border rounded-lg px-2.5 py-1.5 text-sm font-bold bg-white" />
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-gray-500">Euro BCV</label>
+              <input type="number" step="0.01" id="admin-eur" class="w-full border rounded-lg px-2.5 py-1.5 text-sm font-bold bg-white" />
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-gray-500">Tasa USDT</label>
+              <input type="number" step="0.01" id="admin-usdt" class="w-full border rounded-lg px-2.5 py-1.5 text-sm font-bold bg-white" />
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-gray-500">% Recargo Nocturno</label>
+              <input type="number" id="admin-recargo" class="w-full border rounded-lg px-2.5 py-1.5 text-sm font-bold bg-white" />
+            </div>
+          </div>
+          <button onclick="guardarConfigAdmin()" class="w-full bg-gray-900 text-yellow-400 text-xs font-extrabold py-2.5 rounded-lg">
+            Guardar Tasas y Recargo
+          </button>
+        </div>
+
+        <!-- AGREGAR RUTA LOCAL -->
+        <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2.5">
+          <h4 class="text-xs font-black uppercase text-gray-700">Agregar Nueva Ruta Local</h4>
+          <input type="text" id="admin-sector" placeholder="Nombre del sector o destino" class="w-full border rounded-lg px-2.5 py-2 text-xs font-semibold bg-white" />
+          <div class="grid grid-cols-2 gap-2">
+            <select id="admin-zona" class="border rounded-lg px-2 py-2 text-xs font-semibold bg-white">
+              <option value="Los Teques">Los Teques</option>
+              <option value="Carrizal">Carrizal</option>
+              <option value="San Antonio">San Antonio</option>
+              <option value="Caracas">Caracas</option>
+            </select>
+            <input type="number" step="0.5" id="admin-precio" placeholder="Tarifa base ($)" class="border rounded-lg px-2.5 py-2 text-xs font-bold bg-white" />
+          </div>
+          <button onclick="guardarRutaLocal()" class="w-full bg-red-600 text-white text-xs font-extrabold py-2.5 rounded-lg">
+            Guardar Ruta en Teléfono
+          </button>
+        </div>
+
+        <!-- SINCRONIZACIÓN CON GOOGLE SHEETS Y RESPALDO -->
+        <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-300 space-y-2.5">
+          <h4 class="text-xs font-black uppercase text-yellow-900">Nube Google Sheets y Respaldo</h4>
+          <p class="text-[11px] text-yellow-800 leading-snug">
+            Lee automáticamente los precios desde tu Hoja de Google conectada o copia un respaldo JSON:
+          </p>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="sincronizarNube(true)" class="bg-gray-900 text-yellow-400 text-xs font-bold py-2.5 rounded-lg">
+              ↻ Leer Google Sheets
+            </button>
+            <button onclick="copiarRespaldo()" class="bg-white border border-gray-300 text-gray-800 text-xs font-bold py-2.5 rounded-lg">
+              📋 Copiar Respaldo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SHEETDB_URL = "https://sheetdb.io/api/v1/34b9vzs320xnu";
+    const PIN_ADMIN = "2026";
+
+    const RUTAS_INICIALES = [
+      { sector: "Casco Central / Av. Bermúdez / Hospital Victorino", zona: "Los Teques", precio: 2.0 },
+      { sector: "El Tambor / Carretera Vieja (Entrada)", zona: "Los Teques", precio: 3.0 },
+      { sector: "Los Nuevos Teques / El Paso", zona: "Los Teques", precio: 3.0 },
+      { sector: "San Pedro de los Altos", zona: "Los Teques", precio: 6.0 },
+      { sector: "CC La Cascada / Montaña Alta", zona: "Carrizal", precio: 5.0 },
+      { sector: "Brisas de Oriente / Yerbabuena", zona: "Carrizal", precio: 6.0 },
+      { sector: "San Antonio de los Altos (Casco / La Morita)", zona: "San Antonio", precio: 8.0 },
+      { sector: "Plaza Venezuela / Chacaíto (Caracas)", zona: "Caracas", precio: 20.0 }
+    ];
+
+    let estado = {
+      moneda: "USD",
+      tasas: { USD: 45.50, EUR: 49.20, USDT: 47.00 },
+      nocturno: false,
+      recargoPct: 20,
+      zonaActiva: "Todos",
+      rutas: []
+    };
+
+    function iniciarApp() {
+      const guardado = localStorage.getItem("taxi4esquinas_data");
+      if (guardado) {
+        try {
+          estado = { ...estado, ...JSON.parse(guardado) };
+        } catch (e) {
+          estado.rutas = [...RUTAS_INICIALES];
+        }
+      } else {
+        estado.rutas = [...RUTAS_INICIALES];
+      }
+
+      const hoy = new Date();
+      document.getElementById("fecha-actual").textContent = hoy.toLocaleDateString("es-VE", {
+        weekday: "short", day: "numeric", month: "short"
+      });
+
+      document.getElementById("toggle-nocturno").checked = estado.nocturno;
+      actualizarUI();
+      obtenerTasaBCV(false);
+      sincronizarNube(false);
+    }
+
+    function guardarEstado() {
+      localStorage.setItem("taxi4esquinas_data", JSON.stringify(estado));
+    }
+
+    // Lectura desde Google Sheets (SheetDB)
+    async function sincronizarNube(notificar = true) {
+      const icon = document.getElementById("icon-sync");
+      const labelNube = document.getElementById("estado-nube");
+      icon.classList.add("animate-spin");
+      try {
+        const res = await fetch(SHEETDB_URL);
+        if (!res.ok) throw new Error("Error de conexión");
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const rutasNube = data
+            .filter(item => item.sector && item.precio)
+            .map(item => ({
+              sector: String(item.sector).trim(),
+              zona: item.zona ? String(item.zona).trim() : "Los Teques",
+              precio: parseFloat(String(item.precio).replace(",", ".")) || 0
+            }))
+            .filter(r => r.precio > 0);
+
+          if (rutasNube.length > 0) {
+            estado.rutas = rutasNube;
+            guardarEstado();
+            renderizarRutas();
+            labelNube.textContent = "● Sincronizado con Google Sheets";
+            labelNube.className = "text-[10px] font-semibold text-emerald-600 block mt-0.5";
+            if (notificar) mostrarToast("Tarifario actualizado desde Google Sheets");
+          } else {
+            labelNube.textContent = "● Hoja sin filas válidas (usando respaldo)";
+            labelNube.className = "text-[10px] font-semibold text-amber-600 block mt-0.5";
+          }
+        }
+      } catch (e) {
+        labelNube.textContent = "● Modo sin conexión (usando copia local)";
+        labelNube.className = "text-[10px] font-semibold text-amber-600 block mt-0.5";
+        if (notificar) mostrarToast("Sin conexión a internet. Usando lista local.");
+      } finally {
+        icon.classList.remove("animate-spin");
+      }
+    }
+
+    // Consulta automática de tasas oficiales en ve.dolarapi.com
+    async function obtenerTasaBCV(notificar = true) {
+      try {
+        const [resUsd, resEur] = await Promise.allSettled([
+          fetch("https://ve.dolarapi.com/v1/dolares/oficial"),
+          fetch("https://ve.dolarapi.com/v1/euros/oficial")
+        ]);
+
+        let actualizado = false;
+        if (resUsd.status === "fulfilled" && resUsd.value.ok) {
+          const dataUsd = await resUsd.value.json();
+          if (dataUsd && dataUsd.promedio) {
+            estado.tasas.USD = parseFloat(dataUsd.promedio.toFixed(2));
+            actualizado = true;
+          }
+        }
+        if (resEur.status === "fulfilled" && resEur.value.ok) {
+          const dataEur = await resEur.value.json();
+          if (dataEur && dataEur.promedio) {
+            estado.tasas.EUR = parseFloat(dataEur.promedio.toFixed(2));
+            actualizado = true;
+          }
+        }
+
+        if (actualizado) {
+          guardarEstado();
+          actualizarUI();
+          if (notificar) mostrarToast(`Tasas BCV actualizadas (${estado.tasas.USD} Bs.)`);
+        }
+      } catch (e) {
+        if (notificar) mostrarToast("No se pudo conectar con BCV. Verifica tu internet.");
+      }
+    }
+
+    function cambiarMoneda(moneda) {
+      estado.moneda = moneda;
+      guardarEstado();
+      actualizarUI();
+    }
+
+    function toggleNocturno() {
+      estado.nocturno = document.getElementById("toggle-nocturno").checked;
+      guardarEstado();
+      actualizarUI();
+    }
+
+    function actualizarUI() {
+      ["USD", "EUR", "USDT"].forEach(m => {
+        const btn = document.getElementById(`tab-${m}`);
+        if (m === estado.moneda) {
+          btn.className = "py-2 text-xs font-extrabold rounded-lg transition bg-gray-900 text-yellow-400 shadow";
+        } else {
+          btn.className = "py-2 text-xs font-bold rounded-lg transition text-gray-600";
+        }
+      });
+
+      const nombres = { USD: "Tasa Dólar BCV Hoy", EUR: "Tasa Euro BCV Hoy", USDT: "Tasa USDT Hoy" };
+      document.getElementById("label-tasa").textContent = nombres[estado.moneda];
+      document.getElementById("valor-tasa").textContent = estado.tasas[estado.moneda].toFixed(2);
+      document.getElementById("badge-recargo").textContent = `+${estado.recargoPct}%`;
+
+      renderizarRutas();
+      calcularLibre();
+      calcularMixto();
+    }
+
+    function obtenerSimboloMoneda() {
+      if (estado.moneda === "EUR") return "€";
+      if (estado.moneda === "USDT") return "USDT ";
+      return "$";
+    }
+
+    // Mantiene fija la tarifa base en divisas y aplica recargo nocturno si está activo
+    function calcularPrecioFinalDivisa(precioBase) {
+      if (!estado.nocturno) return precioBase;
+      return precioBase * (1 + estado.recargoPct / 100);
+    }
+
+    function renderizarRutas() {
+      const contenedor = document.getElementById("lista-rutas");
+      const texto = document.getElementById("buscador").value.toLowerCase().trim();
+      const tasaActual = estado.tasas[estado.moneda];
+      const simbolo = obtenerSimboloMoneda();
+
+      const filtradas = estado.rutas.filter(r => {
+        const coincideZona = estado.zonaActiva === "Todos" || r.zona.toLowerCase() === estado.zonaActiva.toLowerCase();
+        const coincideTexto = r.sector.toLowerCase().includes(texto) || r.zona.toLowerCase().includes(texto);
+        return coincideZona && coincideTexto;
+      });
+
+      if (filtradas.length === 0) {
+        contenedor.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-xs font-bold text-gray-400 border border-gray-200">No se encontraron destinos para esa búsqueda.</div>`;
+        return;
+      }
+
+      contenedor.innerHTML = filtradas.map(r => {
+        const divisaFinal = calcularPrecioFinalDivisa(r.precio);
+        const totalBs = divisaFinal * tasaActual;
+        const divisaTxt = `${simbolo}${divisaFinal.toFixed(2)}`;
+        const bsTxt = `${totalBs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`;
+        const sectorLimpio = r.sector.replace(/'/g, "");
+
+        return `
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-200 flex items-center justify-between gap-2.5">
+            <div class="min-w-0 flex-1">
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-0.5 rounded">${r.zona}</span>
+              <h3 class="text-sm font-bold text-gray-900 mt-1 leading-snug">${r.sector}</h3>
+            </div>
+            <div class="text-right shrink-0 flex items-center gap-2.5">
+              <div onclick="copiarTexto('${sectorLimpio}: ${divisaTxt} (${bsTxt})')" title="Toca para copiar" class="cursor-pointer active:scale-95">
+                <span class="text-base font-black text-gray-950 block">${divisaTxt}</span>
+                <span class="text-xs font-extrabold text-emerald-700 block">${bsTxt}</span>
+              </div>
+              <button onclick="enviarWhatsApp('${sectorLimpio}', '${divisaTxt}', '${bsTxt}')" title="Enviar presupuesto por WhatsApp"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl shadow-sm active:scale-95 transition">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function filtrarRutas() {
+      const val = document.getElementById("buscador").value;
+      document.getElementById("btn-limpiar-busqueda").classList.toggle("hidden", val.length === 0);
+      renderizarRutas();
+    }
+
+    function limpiarBuscador() {
+      document.getElementById("buscador").value = "";
+      filtrarRutas();
+    }
+
+    function seleccionarZona(zona) {
+      estado.zonaActiva = zona;
+      document.querySelectorAll(".zona-chip").forEach(btn => {
+        if (btn.dataset.zona === zona) {
+          btn.className = "zona-chip px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap bg-gray-900 text-yellow-400";
+        } else {
+          btn.className = "zona-chip px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white text-gray-700 border border-gray-200";
+        }
+      });
+      renderizarRutas();
+    }
+
+    function enviarWhatsApp(destino, divisa, bs) {
+      const tasa = estado.tasas[estado.moneda].toFixed(2);
+      const noct = estado.nocturno ? " (Tarifa Nocturna)" : "";
+      const msg = `*LÍNEA DE TAXI 4 ESQUINAS*
+Destino: ${destino}${noct}
+Tarifa: ${divisa}
+Total Bs: ${bs}
+Tasa ref: ${tasa} Bs.`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+
+    function copiarTexto(texto) {
+      const temp = document.createElement("textarea");
+      temp.value = texto;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      document.body.removeChild(temp);
+      mostrarToast("Tarifa copiada al portapapeles");
+    }
+
+    function mostrarToast(mensaje) {
+      const t = document.getElementById("toast");
+      t.textContent = mensaje;
+      t.classList.remove("opacity-0");
+      setTimeout(() => t.classList.add("opacity-0"), 2300);
+    }
+
+    function mostrarVista(vista) {
+      const esTarifario = vista === "tarifario";
+      document.getElementById("vista-tarifario").classList.toggle("hidden", !esTarifario);
+      document.getElementById("vista-calculadora").classList.toggle("hidden", esTarifario);
+
+      document.getElementById("btn-vista-tarifario").className = esTarifario
+        ? "py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide bg-gray-900 text-yellow-400 shadow"
+        : "py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide bg-white text-gray-700 border border-gray-200";
+
+      document.getElementById("btn-vista-calculadora").className = !esTarifario
+        ? "py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide bg-gray-900 text-yellow-400 shadow"
+        : "py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide bg-white text-gray-700 border border-gray-200";
+    }
+
+    function calcularLibre() {
+      const monto = parseFloat(document.getElementById("calc-monto").value) || 0;
+      const finalDivisa = calcularPrecioFinalDivisa(monto);
+      const bs = finalDivisa * estado.tasas[estado.moneda];
+      document.getElementById("calc-resultado-bs").textContent = `${bs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`;
+    }
+
+    function enviarCalcWhatsApp() {
+      const monto = parseFloat(document.getElementById("calc-monto").value) || 0;
+      if (monto <= 0) return mostrarToast("Ingresa un monto primero");
+      const finalDivisa = calcularPrecioFinalDivisa(monto);
+      const bs = (finalDivisa * estado.tasas[estado.moneda]).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      enviarWhatsApp("Servicio Personalizado", `${obtenerSimboloMoneda()}${finalDivisa.toFixed(2)}`, `${bs} Bs.`);
+    }
+
+    function calcularMixto() {
+      const carrera = parseFloat(document.getElementById("mixto-carrera").value) || 0;
+      const entrega = parseFloat(document.getElementById("mixto-entrega").value) || 0;
+      const box = document.getElementById("mixto-resultado");
+      const tasa = estado.tasas[estado.moneda];
+
+      if (carrera <= 0 || entrega <= 0) {
+        box.innerHTML = "Ingresa el monto de la carrera y el efectivo que entrega el pasajero.";
+        return;
+      }
+
+      const diferencia = entrega - carrera;
+      const enBs = Math.abs(diferencia * tasa).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      if (diferencia > 0) {
+        box.innerHTML = `<span class="text-emerald-700 text-sm font-black block">Vuelto a entregar: $${diferencia.toFixed(2)} o ${enBs} Bs.</span>`;
+      } else if (diferencia < 0) {
+        box.innerHTML = `<span class="text-red-600 text-sm font-black block">Falta por cobrar: $${Math.abs(diferencia).toFixed(2)} o ${enBs} Bs.</span>`;
+      } else {
+        box.innerHTML = `<span class="text-gray-900 text-sm font-black block">Pago exacto. No hay vuelto.</span>`;
+      }
+    }
+
+    function abrirModalTasaRapida() {
+      document.getElementById("titulo-modal-tasa").textContent = `Editar Tasa (${estado.moneda})`;
+      document.getElementById("input-nueva-tasa").value = estado.tasas[estado.moneda];
+      document.getElementById("modal-tasa").classList.remove("hidden");
+      document.getElementById("modal-tasa").classList.add("flex");
+    }
+
+    function cerrarModalTasa() {
+      document.getElementById("modal-tasa").classList.add("hidden");
+      document.getElementById("modal-tasa").classList.remove("flex");
+    }
+
+    function guardarTasaManual() {
+      const val = parseFloat(document.getElementById("input-nueva-tasa").value);
+      if (val && val > 0) {
+        estado.tasas[estado.moneda] = val;
+        guardarEstado();
+        actualizarUI();
+        cerrarModalTasa();
+        mostrarToast("Tasa actualizada");
+      }
+    }
+
+    function abrirModalAdmin() {
+      document.getElementById("input-pin").value = "";
+      document.getElementById("admin-login").classList.remove("hidden");
+      document.getElementById("admin-contenido").classList.add("hidden");
+      document.getElementById("modal-admin").classList.remove("hidden");
+      document.getElementById("modal-admin").classList.add("flex");
+    }
+
+    function cerrarModalAdmin() {
+      document.getElementById("modal-admin").classList.add("hidden");
+      document.getElementById("modal-admin").classList.remove("flex");
+    }
+
+    function verificarPin() {
+      if (document.getElementById("input-pin").value === PIN_ADMIN) {
+        document.getElementById("admin-login").classList.add("hidden");
+        document.getElementById("admin-contenido").classList.remove("hidden");
+        document.getElementById("admin-usd").value = estado.tasas.USD;
+        document.getElementById("admin-eur").value = estado.tasas.EUR;
+        document.getElementById("admin-usdt").value = estado.tasas.USDT;
+        document.getElementById("admin-recargo").value = estado.recargoPct;
+      } else {
+        mostrarToast("PIN incorrecto");
+      }
+    }
+
+    function guardarConfigAdmin() {
+      estado.tasas.USD = parseFloat(document.getElementById("admin-usd").value) || estado.tasas.USD;
+      estado.tasas.EUR = parseFloat(document.getElementById("admin-eur").value) || estado.tasas.EUR;
+      estado.tasas.USDT = parseFloat(document.getElementById("admin-usdt").value) || estado.tasas.USDT;
+      estado.recargoPct = parseInt(document.getElementById("admin-recargo").value) || 20;
+      guardarEstado();
+      actualizarUI();
+      mostrarToast("Configuración guardada");
+    }
+
+    function guardarRutaLocal() {
+      const sector = document.getElementById("admin-sector").value.trim();
+      const zona = document.getElementById("admin-zona").value;
+      const precio = parseFloat(document.getElementById("admin-precio").value);
+      if (!sector || !precio || precio <= 0) return mostrarToast("Completa sector y tarifa válida");
+
+      estado.rutas.unshift({ sector, zona, precio });
+      guardarEstado();
+      renderizarRutas();
+      document.getElementById("admin-sector").value = "";
+      document.getElementById("admin-precio").value = "";
+      mostrarToast("Ruta agregada al teléfono");
+    }
+
+    function copiarRespaldo() {
+      copiarTexto(JSON.stringify(estado.rutas));
+      mostrarToast("Respaldo JSON copiado al portapapeles");
+    }
+
+    window.onload = iniciarApp;
+  </script>
+</body>
+</html>
+```
