@@ -209,7 +209,7 @@
     </div>
   </div>
 
-  <!-- 5. MODAL PANEL ADMINISTRADOR (PIN 2026) -->
+  <!-- 5. MODAL PANEL ADMINISTRADOR -->
   <div id="modal-admin" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-md w-full p-4 space-y-4 my-auto shadow-2xl">
       <div class="flex items-center justify-between border-b pb-2.5">
@@ -219,8 +219,8 @@
 
       <!-- ACCESO PIN -->
       <div id="admin-login" class="space-y-3">
-        <p class="text-xs text-gray-600 font-medium">Ingresa el PIN de directiva para gestionar tasas, recargos y rutas:</p>
-        <input type="password" inputmode="numeric" id="input-pin" placeholder="PIN (2026)"
+        <p class="text-xs text-gray-600 font-medium">Ingresa tu PIN de administrador para gestionar tasas, recargos y rutas:</p>
+        <input type="password" inputmode="numeric" id="input-pin" placeholder="PIN de acceso"
           class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-center text-lg font-black tracking-widest" />
         <button onclick="verificarPin()" class="w-full bg-gray-900 text-yellow-400 font-extrabold py-2.5 rounded-xl text-sm">
           Desbloquear Panel
@@ -252,6 +252,26 @@
           </div>
           <button onclick="guardarConfigAdmin()" class="w-full bg-gray-900 text-yellow-400 text-xs font-extrabold py-2.5 rounded-lg">
             Guardar Tasas y Recargo
+          </button>
+        </div>
+
+        <!-- CAMBIAR PIN DE ADMINISTRADOR -->
+        <div class="bg-red-50 p-3 rounded-xl border border-red-200 space-y-2.5">
+          <h4 class="text-xs font-black uppercase text-red-800">Cambiar Contraseña / PIN</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] font-bold text-gray-600">PIN actual</label>
+              <input type="password" inputmode="numeric" id="pin-actual" placeholder="••••"
+                class="w-full border rounded-lg px-2.5 py-1.5 text-sm font-bold bg-white text-center tracking-widest" />
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-gray-600">PIN nuevo</label>
+              <input type="password" inputmode="numeric" id="pin-nuevo" placeholder="••••"
+                class="w-full border rounded-lg px-2.5 py-1.5 text-sm font-bold bg-white text-center tracking-widest" />
+            </div>
+          </div>
+          <button onclick="cambiarPinAdmin()" class="w-full bg-red-600 text-white text-xs font-extrabold py-2.5 rounded-lg">
+            Actualizar PIN Secreto
           </button>
         </div>
 
@@ -294,7 +314,7 @@
 
   <script>
     const SHEETDB_URL = "https://sheetdb.io/api/v1/34b9vzs320xnu";
-    const PIN_ADMIN = "2026";
+    const PIN_POR_DEFECTO = "2026";
 
     const RUTAS_INICIALES = [
       { sector: "Casco Central / Av. Bermúdez / Hospital Victorino", zona: "Los Teques", precio: 2.0 },
@@ -313,6 +333,7 @@
       nocturno: false,
       recargoPct: 20,
       zonaActiva: "Todos",
+      pinAdmin: PIN_POR_DEFECTO,
       rutas: []
     };
 
@@ -320,7 +341,14 @@
       const guardado = localStorage.getItem("taxi4esquinas_data");
       if (guardado) {
         try {
-          estado = { ...estado, ...JSON.parse(guardado) };
+          const parsed = JSON.parse(guardado);
+          estado = {
+            ...estado,
+            ...parsed,
+            tasas: { ...estado.tasas, ...(parsed.tasas || {}) },
+            pinAdmin: parsed.pinAdmin ? String(parsed.pinAdmin) : PIN_POR_DEFECTO,
+            rutas: Array.isArray(parsed.rutas) && parsed.rutas.length > 0 ? parsed.rutas : [...RUTAS_INICIALES]
+          };
         } catch (e) {
           estado.rutas = [...RUTAS_INICIALES];
         }
@@ -343,7 +371,6 @@
       localStorage.setItem("taxi4esquinas_data", JSON.stringify(estado));
     }
 
-    // Lectura desde Google Sheets (SheetDB)
     async function sincronizarNube(notificar = true) {
       const icon = document.getElementById("icon-sync");
       const labelNube = document.getElementById("estado-nube");
@@ -383,7 +410,6 @@
       }
     }
 
-    // Consulta automática de tasas oficiales en ve.dolarapi.com
     async function obtenerTasaBCV(notificar = true) {
       try {
         const [resUsd, resEur] = await Promise.allSettled([
@@ -455,7 +481,6 @@
       return "$";
     }
 
-    // Mantiene fija la tarifa base en divisas y aplica recargo nocturno si está activo
     function calcularPrecioFinalDivisa(precioBase) {
       if (!estado.nocturno) return precioBase;
       return precioBase * (1 + estado.recargoPct / 100);
@@ -636,6 +661,8 @@ Tasa ref: ${tasa} Bs.`;
 
     function abrirModalAdmin() {
       document.getElementById("input-pin").value = "";
+      document.getElementById("pin-actual").value = "";
+      document.getElementById("pin-nuevo").value = "";
       document.getElementById("admin-login").classList.remove("hidden");
       document.getElementById("admin-contenido").classList.add("hidden");
       document.getElementById("modal-admin").classList.remove("hidden");
@@ -648,7 +675,7 @@ Tasa ref: ${tasa} Bs.`;
     }
 
     function verificarPin() {
-      if (document.getElementById("input-pin").value === PIN_ADMIN) {
+      if (document.getElementById("input-pin").value.trim() === estado.pinAdmin) {
         document.getElementById("admin-login").classList.add("hidden");
         document.getElementById("admin-contenido").classList.remove("hidden");
         document.getElementById("admin-usd").value = estado.tasas.USD;
@@ -658,6 +685,24 @@ Tasa ref: ${tasa} Bs.`;
       } else {
         mostrarToast("PIN incorrecto");
       }
+    }
+
+    function cambiarPinAdmin() {
+      const actual = document.getElementById("pin-actual").value.trim();
+      const nuevo = document.getElementById("pin-nuevo").value.trim();
+
+      if (actual !== estado.pinAdmin) {
+        return mostrarToast("El PIN actual no coincide");
+      }
+      if (!nuevo || nuevo.length < 4) {
+        return mostrarToast("El PIN nuevo debe tener al menos 4 caracteres");
+      }
+
+      estado.pinAdmin = nuevo;
+      guardarEstado();
+      document.getElementById("pin-actual").value = "";
+      document.getElementById("pin-nuevo").value = "";
+      mostrarToast("PIN actualizado en este dispositivo");
     }
 
     function guardarConfigAdmin() {
@@ -693,4 +738,3 @@ Tasa ref: ${tasa} Bs.`;
   </script>
 </body>
 </html>
-```
